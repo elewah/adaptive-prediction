@@ -44,9 +44,7 @@ if torch.cuda.is_available():
 
 ###########################################################################
 # Change this to match your computing environment!
-LYFT_SAMPLE_RAW_DATA_DIR: Final[
-    str
-] = "/home/bivanovic/datasets/lyft/scenes/sample.zarr"
+LYFT_SAMPLE_RAW_DATA_DIR: Final[str] = "/home/iot-lab/datasets/nuScenes"
 ###########################################################################
 
 
@@ -60,8 +58,9 @@ k0_checkpoint = 20
 adaptive_checkpoint = 20
 oracle_checkpoint = 1
 
-eval_data = "lyft_sample-mini_val"
-
+# set eval data nunsces_mini
+eval_data = "nusc_mini-mini_val"
+sample_type = "nusc_mini"
 history_sec = 2.0
 prediction_sec = 6.0
 
@@ -271,7 +270,7 @@ adaptive_trajectron, hyperparams = load_model(
     device,
     epoch=adaptive_checkpoint,
     custom_hyperparams={
-        "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+        "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
         "single_mode_multi_sample": True,
     },
 )
@@ -281,7 +280,7 @@ k0_trajectron, _ = load_model(
     device,
     epoch=k0_checkpoint,
     custom_hyperparams={
-        "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+        "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
         "single_mode_multi_sample": False,
     },
 )
@@ -290,7 +289,7 @@ k0_finetune_trajectron, _ = load_model(
     device,
     epoch=k0_checkpoint,
     custom_hyperparams={
-        "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+        "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
         "single_mode_multi_sample": False,
     },
 )
@@ -300,7 +299,7 @@ base_trajectron, _ = load_model(
     device,
     epoch=base_checkpoint,
     custom_hyperparams={
-        "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+        "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
         "single_mode_multi_sample": False,
     },
 )
@@ -309,7 +308,7 @@ finetune_trajectron, _ = load_model(
     device,
     epoch=base_checkpoint,
     custom_hyperparams={
-        "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+        "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
         "single_mode_multi_sample": False,
     },
 )
@@ -319,7 +318,7 @@ oracle_trajectron, _ = load_model(
     device,
     epoch=oracle_checkpoint,
     custom_hyperparams={
-        "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+        "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
         "single_mode_multi_sample": False,
     },
 )
@@ -348,7 +347,7 @@ online_eval_dataset = UnifiedDataset(
     num_workers=0,
     cache_location=hyperparams["trajdata_cache_dir"],
     data_dirs={
-        "lyft_sample": LYFT_SAMPLE_RAW_DATA_DIR,
+        sample_type: LYFT_SAMPLE_RAW_DATA_DIR,
     },
     verbose=True,
 )
@@ -366,7 +365,7 @@ batch_eval_dataset = UnifiedDataset(
     num_workers=0,
     cache_location=hyperparams["trajdata_cache_dir"],
     data_dirs={
-        "lyft_sample": LYFT_SAMPLE_RAW_DATA_DIR,
+        sample_type: LYFT_SAMPLE_RAW_DATA_DIR,
     },
     verbose=True,
 )
@@ -389,10 +388,10 @@ def plot_outputs(
     batch: AgentBatch = eval_dataset.get_collate_fn(pad_format="right")(
         [eval_dataset[dataset_idx]]
     )
-    
+
     fig, ax = plt.subplots()
     trajdata_vis.plot_agent_batch(batch, batch_idx=0, ax=ax, show=False, close=False)
-    
+
     with torch.no_grad():
         # predictions = model.predict(batch,
         #                             z_mode=True,
@@ -474,9 +473,9 @@ def per_agent_eval(
             )
 
         model_perf = defaultdict(lambda: defaultdict(list))
-        eval_results: Dict[
-            AgentType, Dict[str, torch.Tensor]
-        ] = model.predict_and_evaluate_batch(batch)
+        eval_results: Dict[AgentType, Dict[str, torch.Tensor]] = (
+            model.predict_and_evaluate_batch(batch)
+        )
         for agent_type, metric_dict in eval_results.items():
             for metric, values in metric_dict.items():
                 model_perf[agent_type][metric].append(values.cpu().numpy())
@@ -531,7 +530,7 @@ online_eval_dataloader = get_dataloader(
 
 adaptive_trajectron.reset_adaptive_info()
 
-N_SAMPLES = 40001
+N_SAMPLES = 100
 
 outer_pbar = tqdm(
     online_eval_dataloader,
@@ -560,7 +559,7 @@ for data_sample, online_batch in enumerate(outer_pbar):
             device,
             epoch=base_checkpoint,
             custom_hyperparams={
-                "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+                "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
                 "single_mode_multi_sample": False,
             },
         )
@@ -569,7 +568,7 @@ for data_sample, online_batch in enumerate(outer_pbar):
             device,
             epoch=k0_checkpoint,
             custom_hyperparams={
-                "trajdata_cache_dir": "/home/bivanovic/.unified_data_cache",
+                "trajdata_cache_dir": "/home/iot-lab/.unified_data_cache",
                 "single_mode_multi_sample": False,
             },
         )
@@ -597,7 +596,7 @@ for data_sample, online_batch in enumerate(outer_pbar):
     # # This is effectively measuring number of updates/observed data points.
     # agent_ts += 1
 
-    if agent_ts % 10 == 0:  # or agent_ts < 10:
+    if agent_ts % 1 == 0:  # or agent_ts < 10:
         per_agent_eval(
             curr_agent,
             adaptive_trajectron,

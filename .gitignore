@@ -2,7 +2,7 @@ public/
 wandb/
 *.csv
 *.pkl
-
+experiments/nuScenes/figures/
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
